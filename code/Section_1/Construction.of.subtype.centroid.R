@@ -28,6 +28,3 @@ colnames(UBS93_median_centriod)[1]     <- "Basal"
 save(UBS93_median_centriod,file="Pro_TNBC/paper/data/method/UBS93_median_centriod.RData")
 
 
-
-
-

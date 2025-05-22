@@ -1,9 +1,3 @@
-
-##########################################################################################
-#### The entire process of analyzing single-cell RNAseq data of TNBC in GSE161529
-##########################################################################################
-
-
 ####merge data####
 library(Matrix)
 library(Seurat)
@@ -18,7 +12,7 @@ GSE161529_TNBC_exprMat           <- foreach(i = 81:88,.combine = cbind)%dopar%{
     cell.column = 2,
     unique.features = TRUE,
     strip.suffix = FALSE)
-  GSM49092i_exprMat              <- as.matrix(GSM49092i_counts)
+  GSM49092i_exprMat      <- as.matrix(GSM49092i_counts)
 }
 Sample=c(rep("TNBC_0126",3666),rep("TNBC_0135",15870),rep("TNBC_0106",1065),rep("TNBC_0114",2015),rep("TNBC_4031",5581),rep("TNBC_0131",6456),rep("TNBC_0554",9593),rep("TNBC_0177",21130))
 GSE161529_TNBC                           <- data.frame(cell.id=colnames(GSE161529_TNBC_exprMat),Sample=Sample)
@@ -31,31 +25,36 @@ GSE161529_TNBC_scRNA[["percent.mt"]]     <- PercentageFeatureSet(GSE161529_TNBC_
 head(GSE161529_TNBC_scRNA@meta.data,5)
 VlnPlot(GSE161529_TNBC_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 GSE161529_TNBC_scRNA                     <- subset(GSE161529_TNBC_scRNA,nFeature_RNA >0 & nFeature_RNA<8000)
+
 #normalized
 GSE161529_TNBC_scRNA                     <- NormalizeData(GSE161529_TNBC_scRNA)
 #features choosing
 GSE161529_TNBC_scRNA                     <- FindVariableFeatures(GSE161529_TNBC_scRNA,selection.method = "vst",nfeatures = 2000)#choose high variability between cells.
 #identify the 10 most highly variable genes
 top10                                    <- head(VariableFeatures(GSE161529_TNBC_scRNA),10)
+
 #genes related to cell cycle
 cellcycle_gene                           <- c(cc.genes$s.genes,cc.genes$g2m.genes)
 head(cellcycle_gene)
 CaseMatch(cellcycle_gene,VariableFeatures(GSE161529_TNBC_scRNA))#check which cell cycle-related genes are among the hypervariable genes we selected.
 # results:character(0)
 #data scaling 
-all_gene                                   <- rownames(GSE161529_TNBC_scRNA)
-GSE161529_TNBC_scRNA                       <- ScaleData(GSE161529_TNBC_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+all_gene                                 <- rownames(GSE161529_TNBC_scRNA)
+GSE161529_TNBC_scRNA                     <- ScaleData(GSE161529_TNBC_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+
 #linear dimensionality reduction
-GSE161529_TNBC_scRNA                       <- RunPCA(GSE161529_TNBC_scRNA,features = VariableFeatures(object=GSE161529_TNBC_scRNA))
+GSE161529_TNBC_scRNA                     <- RunPCA(GSE161529_TNBC_scRNA,features = VariableFeatures(object=GSE161529_TNBC_scRNA))
+
 #dimension selection
-GSE161529_TNBC_scRNA                       <- JackStraw(GSE161529_TNBC_scRNA,num.replicate = 100)
-GSE161529_TNBC_scRNA                       <- ScoreJackStraw(GSE161529_TNBC_scRNA,dims = 1:20)
+GSE161529_TNBC_scRNA                     <- JackStraw(GSE161529_TNBC_scRNA,num.replicate = 100)
+GSE161529_TNBC_scRNA                     <- ScoreJackStraw(GSE161529_TNBC_scRNA,dims = 1:20)
 JackStrawPlot(GSE161529_TNBC_scRNA,dims=1:20)
 ElbowPlot(GSE161529_TNBC_scRNA,ndims = 50)#choose dims of 30
 #cell clustering
-GSE161529_TNBC_scRNA                       <- FindNeighbors(GSE161529_TNBC_scRNA,dims = 1:40)
-GSE161529_TNBC_scRNA                       <- FindClusters(GSE161529_TNBC_scRNA,resolution = 0.1)
+GSE161529_TNBC_scRNA                     <- FindNeighbors(GSE161529_TNBC_scRNA,dims = 1:40)
+GSE161529_TNBC_scRNA                     <- FindClusters(GSE161529_TNBC_scRNA,resolution = 0.1)
 table(Idents(GSE161529_TNBC_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 GSE161529_TNBC_scRNA                        <- RunUMAP(GSE161529_TNBC_scRNA,dims = 1:40)
 GSE161529_TNBC_scRNA                        <- RunTSNE(GSE161529_TNBC_scRNA,dims = 1:40,check_duplicates = FALSE)
@@ -67,11 +66,10 @@ GSE161529_TNBC_uamp                         <- merge(GSE161529_TNBC_uamp,GSE1615
 ggplot(data = GSE161529_TNBC_uamp,aes(x=UMAP_1,y=UMAP_2,col=celltype))+
   geom_point()+ggtitle("UAMP plot of GSE161529_TNBC by using all genes")
 GSE161529_TNBC_uamp                         <- merge(GSE161529_TNBC_uamp,GSE161529_TNBC_metadata,by="sample.id")
-
-
-
 ####Cell annotation####
 p12                                  <- DimPlot(GSE161529_TNBC_scRNA,reduction = "umap",label = T)
+p13                                  <- DimPlot(GSE161529_TNBC_scRNA,reduction = "tsne",label = T)
+
 p14                                  <- FeaturePlot(GSE161529_TNBC_scRNA,features = "ENSG00000119888",reduction = "umap",pt.size = 1)+
   theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(),panel.background = element_blank())+ggtitle("EPCAM:epithelial")
 p15                                  <- FeaturePlot(GSE161529_TNBC_scRNA,features = "ENSG00000164692",reduction = "umap",pt.size = 1)+
@@ -117,7 +115,7 @@ p34                                  <- FeaturePlot(GSE161529_TNBC_scRNA,feature
 figure_1                             <- p12+p14+p15+p16+p17+p18+p22+p23+p19+p26+p20+p21+p24+p25+p27+p28+p29+p31+p30+p32+p33+p34 
 ggsave(figure_1,filename = "Pro_TNBC/output/data/scRNASeq/38sample/GSE161529_TNBC/celltype_marker_gene.pdf",height = 30,width = 30  )
 
-####cell anatation by using SingleR
+
 library(clusterProfiler)
 library(SingleR)
 load("~/Pro_TNBC/output/data/scRNASeq/cellclassify.refdata.RData")
@@ -136,9 +134,9 @@ cellpred                  <- SingleR(test = testdata, ref = refdata, labels = re
                                      method = "cluster", clusters = clusters, 
                                      assay.type.test = "logcounts", assay.type.ref = "logcounts")
 celltype = data.frame(ClusterID=rownames(cellpred), celltype=cellpred$labels, stringsAsFactors = F)
-celltype[12,2]            <- "T_cells"
-celltype[13,2]            <- "Pericyte"
-celltype[3,2]             <- "TAM"
+celltype[12,2]  <- "T_cells"
+celltype[13,2]  <- "Pericyte"
+celltype[3,2]   <- "TAM"
 GSE161529_TNBC_scRNA@meta.data$celltype = "NA"
 #annotation
 for(i in 1:nrow(celltype)){
@@ -155,10 +153,13 @@ library(ggplot2)
 library(infercnv)
 library(ComplexHeatmap)
 library(ggpubr)
+
 #inferCNV needs three files:1.count expression matrix,2.group information,3.Gene chromosome information
 #make gene chromosome position information and extract expression matrix.
+
 dat             <- GetAssayData(GSE161529_TNBC_scRNA,assay = "RNA",slot = "count") 
 dat             <- as.data.frame(dat)
+
 library(AnnoProbe)  
 geneInfor=annoGene(rownames(dat),"ENSEMBL",'human')  
 colnames(geneInfor)
@@ -166,11 +167,14 @@ geneInfor=geneInfor[with(geneInfor, order(chr, start)),c(3,4:6)]
 geneInfor=geneInfor[!duplicated(geneInfor[,1]),]
 length(unique(geneInfor[,1]))
 head(geneInfor)
+
 dat                 <- dat[match(geneInfor[,1],rownames(dat)),]
 geneInfor_rown      <- geneInfor$ENSEMBL
 geneInfor           <- geneInfor[,-1]
 rownames(geneInfor) <- geneInfor_rown
+
 meta                <- subset(GSE161529_TNBC_scRNA@meta.data,select = c("celltype"))
+
 
 #inferCNV
 #Two-step construction object
@@ -187,29 +191,34 @@ infercnv_obj = infercnv::run(infercnv_obj,
                              HMM=F,no_plot = T,num_threads=20)   # #Whether to predict CNV based on HMM? True is a long time
 #Finally, many files will be output in out_dir. You can directly use the heat map inside.
 
-####choose tumor cell
+
+#choose tumor cell
 library(infercnv)
 library(tidyverse)
 library(ComplexHeatmap)
 library(circlize)
 library(RColorBrewer)
+
 run.final.infercnv_obj = readRDS("Pro_TNBC/output/data/scRNASeq/38sample/GSE161529_TNBC/infercnv/run.final.infercnv_obj")
 expr          <- run.final.infercnv_obj@expr.data
 normal_loc    <- run.final.infercnv_obj@reference_grouped_cell_indices
 normal_loc    <- normal_loc$T_cells
 test_loc      <- run.final.infercnv_obj@observation_grouped_cell_indices
 test_loc      <- c(test_loc$B_cell,test_loc$CMP,test_loc$Pericyte,test_loc$Endothelial_cells,test_loc$Erythroblast,test_loc$Epithelial_cells,test_loc$Fibroblasts,test_loc$TAM)
+
 anno.df=data.frame(
   CB=c(colnames(expr)[normal_loc],colnames(expr)[test_loc]),
   class=c(rep("normal",length(normal_loc)),rep("test",length(test_loc)))
 )
 head(anno.df)
+
 gn            <- rownames(expr)
 geneFile      <- geneInfor
 sub_geneFile  <- geneFile[intersect(gn,rownames(geneFile)),]
 expr=expr[intersect(gn,rownames(geneFile)),]
 head(sub_geneFile,4)
 expr[1:4,1:4]
+
 #clustering
 set.seed(20210418)
 kmeans.result      <- kmeans(t(expr), 7)
@@ -227,6 +236,7 @@ top_anno          <- HeatmapAnnotation(foo = anno_block(gp = gpar(fill = "NA",co
 color_v=RColorBrewer::brewer.pal(8, "Dark2")[1:7] #类别数
 names(color_v)=as.character(1:7)
 left_anno         <- rowAnnotation(df = kmeans_df_s,col=list(class=c("test"="red","normal" = "blue"),kmeans_class=color_v))
+
 #draw
 pdf("Pro_TNBC/output/data/scRNASeq/38sample/GSE161529_TNBC/infercnv/try1.pdf",width = 15,height = 10)
 ht = Heatmap(t(expr)[rownames(kmeans_df_s),],
@@ -240,12 +250,14 @@ ht = Heatmap(t(expr)[rownames(kmeans_df_s),],
              row_title = NULL,column_title = NULL)
 draw(ht, heatmap_legend_side = "right")
 dev.off()
+
 #
 write.csv(kmeans_df_s,file="Pro_TNBC/output/data/scRNASeq/38sample/GSE161529_TNBC/infercnv/kmeans_df_s.csv")
 GSE161529_TNBC_scRNA@meta.data$kmeans_cluster <- "NA"
 for (i in 1:nrow(kmeans_df_s)){
   GSE161529_TNBC_scRNA@meta.data[which(rownames(GSE161529_TNBC_scRNA@meta.data)==rownames(kmeans_df_s)[i]),'kmeans_cluster'] <- kmeans_df_s$kmeans_class[i]                            
 }
+
 
 GSE161529_TNBC_scRNA@meta.data$cell <- "NA"
 GSE161529_TNBC_scRNA@meta.data$cell[
@@ -256,7 +268,9 @@ GSE161529_TNBC_scRNA@meta.data$cell[
                                       GSE161529_TNBC_scRNA@meta.data$kmeans_cluster=="4"
 ] <- "tumorcell"
 GSE161529_TNBC_scRNA@meta.data$cell[GSE161529_TNBC_scRNA@meta.data$kmeans_cluster== "5"|
-                                      GSE161529_TNBC_scRNA@meta.data$kmeans_cluster=="3"                                   
+                                      GSE161529_TNBC_scRNA@meta.data$kmeans_cluster=="3"
+                                    
+                                    
 ] <- "normalcell"
 View(GSE161529_TNBC_scRNA@meta.data)
 tumorcell     <- GSE161529_TNBC_scRNA@meta.data[GSE161529_TNBC_scRNA@meta.data$cell=="tumorcell",]

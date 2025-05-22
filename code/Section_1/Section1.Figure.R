@@ -1,4 +1,3 @@
-
 library(readr)
 library(ggplot2)
 library(dplyr)
@@ -119,6 +118,7 @@ brca_info                  <- brca_info[brca_info$primary_disease=="Breast Cance
 brca.ccle.log2.rpkm        <- CCLE.log2.rpkm.matrix[,colnames(CCLE.log2.rpkm.matrix) %in% brca_info$CCLE_Name]
 
 library(Rtsne)
+library(ggstar)
 cor_matrix                      <- cor(brca.ccle.log2.rpkm,method = "spearman")
 dissimilarity_matrix            <- 1 - cor_matrix
 normalized_dissimilarity_matrix <- dissimilarity_matrix / max(dissimilarity_matrix)
@@ -127,15 +127,20 @@ plot(tsne_result$Y, col = "blue", pch = 16)
 df1                             <- as.data.frame(tsne_result$Y)
 df1$CCLE_Name                   <- rownames(normalized_dissimilarity_matrix)
 df1                             <- merge(df1,brca_info[,c(4,21)],by="CCLE_Name")
-fig_1c                          <- ggplot(df1, aes(x=V1, y=V2, color=lineage_molecular_subtype)) + geom_point(size=6)+
+fig_1c                          <- ggplot() + geom_star(data=df1,
+                                                        aes(x=V1, y=V2, fill=lineage_molecular_subtype,
+                                                            color=lineage_molecular_subtype,
+                                                            starshape=lineage_molecular_subtype),size=10)+
   xlab("t-SNE1")+ 
   ylab("t-SNE2")+ggplot.style+
   theme(legend.text=element_text(size=40,face='bold'),
         legend.title=element_text(size=40,face = 'bold'),
         legend.key.size = unit(1.5, 'lines'),
-        legend.position = "bottom")+scale_color_manual(values = c("Red","#1E90FF","Purple","#FFA500","#FF69B4"))+
+        legend.position = "bottom")+scale_fill_manual(values = c("#FF3B30","#007AFF","#34C759",  "#D049FF","black"))+
   theme(panel.grid.major=element_line(colour=NA),
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank())+
+  scale_starshape_manual(values = c(28,15,11,13,1))+
+  scale_color_manual(values = c("#FF3B30","#007AFF","#34C759",  "#D049FF","black"))
 ggsave(fig_1c,filename = "Pro_TNBC/paper/plot/section_1/TSNE.of.breast.cancer.cell.lines.in.CCLE.using.all.gene.pdf",width=20,height=15)
 save(tsne_result,file="Pro_TNBC/paper/data/results/section_1/tsne.of.CLLE.RData")
 
@@ -187,4 +192,3 @@ supfig_3                                          <- ggplot(df1, aes(V1, y=V2, c
         panel.grid.minor = element_blank())
 ggsave(supfig_3,filename = "Pro_TNBC/paper/plot/section_1/supfig.3.TSNE.of.breast.cancer.cell.lines.in.CCLE.using.UBS93.gene.panel.pdf",width=20,height=15)
 save(tsne_result,file="Pro_TNBC/paper/data/results/section_1/UBS93.gene.tsne.of.CLLE.RData")
-

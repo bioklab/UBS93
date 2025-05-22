@@ -1,7 +1,3 @@
-####################################################
-####Subtyping for celllines, TCGA BRCA and mouse####
-####################################################
-
 ####the function used to calculate F1 score####
 #pre：classified results predicted
 #y：true classified results
@@ -670,13 +666,13 @@ GSE202771_subtype_result                <- as.matrix(GSE202771_subtype_result)  
 GSE202771_infor                         <- GSE202771_infor[match(GSE202771_infor$sample.id,rownames(GSE202771_subtype_result)),]
 GSE202771_subtype_result                <- cbind(GSE202771_infor[,4],GSE202771_subtype_result)
 GSE202771_subtype_result$total_numbers  <- apply(GSE202771_subtype_result[,2:5],1,function(x){sum(x,na.rm =T)})
-colnames(GSE202771_subtype_result)[1] <- "lineage_molecular_subtype"
+colnames(GSE202771_subtype_result)[1]   <- "lineage_molecular_subtype"
 GSE202771_subtype_basal                 <- subset(GSE202771_subtype_result,lineage_molecular_subtype=="basal_A")
 GSE202771_subtype_basal$ratio           <- GSE202771_subtype_basal$Basal/GSE202771_subtype_basal$total_numbers
 GSE202771_subtype_cl                    <- subset(GSE202771_subtype_result,lineage_molecular_subtype=="basal_B")
 GSE202771_subtype_cl$ratio              <- GSE202771_subtype_cl$Claudin_low/GSE202771_subtype_cl$total_numbers
-GSE202771_subtype_luminal                  <- subset(GSE202771_subtype_result,lineage_molecular_subtype=="luminal")
-GSE202771_subtype_luminal$ratio            <- GSE202771_subtype_luminal$Luminal/GSE202771_subtype_luminal$total_numbers
+GSE202771_subtype_luminal               <- subset(GSE202771_subtype_result,lineage_molecular_subtype=="luminal")
+GSE202771_subtype_luminal$ratio         <- GSE202771_subtype_luminal$Luminal/GSE202771_subtype_luminal$total_numbers
 GSE202771_subtype                       <- rbind(GSE202771_subtype_basal,GSE202771_subtype_cl)
 GSE202771_subtype                       <- rbind(GSE202771_subtype,GSE202771_subtype_luminal)
 GSE202771_subtype$celllines_name        <- rownames(GSE202771_subtype)
@@ -717,9 +713,214 @@ save(scRNAseq_UBS93_subtype,file = "Pro_TNBC/paper/data/results/section_2/scRNAs
 
 
 
+
+######*predicting the single cell RNAseq of cell lines(GSE173634) by SCSubtype ####
+library(readxl)
+SCsubtype_signature_genes            <- read_excel("Pro_TNBC/data/scRNASeq/26/SCsubtype_signature_genes.xlsx")
+SCsubtype_genes                      <- apply(SCsubtype_signature_genes,2,function(x){bitr(x,fromType = "SYMBOL",toType = "ENSEMBL",OrgDb = "org.Hs.eg.db")[,2]}) 
+save(SCsubtype_genes,file = "Pro_TNBC/data/scRNASeq/26/SCsubtype_genes.RData")
+load("Pro_TNBC/data/scRNASeq/26/SCsubtype_genes.RData")
+library(readr)
+metadata                <- read_csv("Pro_TNBC/data/scRNASeq/26/Wu_etal_2021_BRCA_scRNASeq/metadata.csv")
+tumor_metadata          <- subset(metadata,celltype_major=="Cancer Epithelial")
+sampleID                     <- names(table(tumor_metadata$orig.ident))
+load("Pro_TNBC/output/data/scRNASeq/26_sample/GSE176078_scRNA.RData")
+scRNA$cell.id                <- rownames(scRNA@meta.data)
+GSE176068_tumor_scRNA        <- subset(scRNA,cell.id %in% tumor_metadata$...1)
+Tumour_ID                    <- c("CID3948","CID4290A","CID4530N","CID4535","CID3921","CID45171","CID4495","CID44971","CID44991","CID4515","CID3921")
+GSE176068_tumor_train_scRNA  <- subset(GSE176068_tumor_scRNA,orig.ident %in% Tumour_ID)
+save(GSE176068_tumor_train_scRNA,file = "Pro_TNBC/paper/data/results/section_3/GSE176068_tumor_train_scRNA.RData")
+######*single cell RNAseq of cell lines(GSE173634)####
+library(Seurat)
+library(foreach)
+load("Pro_TNBC/output/data/CCLE/GSE173634_scRNA.RData")
+load("~/Pro_TNBC/output/data/CCLE/GSE173634_info.RData")
+load("Pro_TNBC/paper/data/results/section_3/GSE176068_tumor_train_scRNA.RData")
+GSE173634_info_pam50    <- subset(GSE173634_info,lineage_molecular_subtype=="basal_A"|lineage_molecular_subtype=="HER2_amp"|lineage_molecular_subtype=="luminal")
+GSE173634_exp           <- as.matrix(GSE173634_scRNA@assays$RNA@counts) %>% as.data.frame()
+gene_row                <- rownames(GSE173634_exp)
+symbol                  <- bitr(gene_row,fromType = "ENSEMBL",toType = "SYMBOL",OrgDb = "org.Hs.eg.db")
+GSE173634_exp$ENSEMBL   <- rownames(GSE173634_exp)
+GSE173634_df            <- merge(symbol,GSE173634_exp,by="ENSEMBL")
+rown                    <- GSE173634_df$SYMBOL
+GSE173634_df            <- GSE173634_df[,-c(1,2)] %>% as.matrix()
+rownames(GSE173634_df)  <- make.names(rown,T)
+GSE173634_df            <- as.matrix(GSE173634_df)
+GSE173634_df_scRNA      <- CreateSeuratObject(counts = GSE173634_df)
+temp_allgenes  <- c(as.vector(SCsubtype_signature_genes$Basal_SC),
+                    as.vector(SCsubtype_signature_genes$Her2E_SC),
+                    as.vector(SCsubtype_signature_genes$LumA_SC),
+                    as.vector(SCsubtype_signature_genes$LumB_SC))
+temp_allgenes  <- unique(temp_allgenes[!temp_allgenes == ""])
+center_sweep   <- function(x, row.w = rep(1, nrow(x))/nrow(x)) {
+  get_average  <- function(v) sum(v * row.w)/sum(row.w)
+  average      <- apply(x, 2, get_average)
+  sweep(x, 2, average)
+}
+GSE173634_subtype_result        <- NULL
+for (i in 1:nrow(GSE173634_info_pam50)) {
+  A                  <- GSE173634_info_pam50[i,3] %>% as.character()
+  molecular_subtype  <- GSE173634_info_pam50[i,2] %>% as.character()
+  #normalized
+  scRNA                      <- subset(GSE173634_df_scRNA, orig.ident == A)
+  scRNA                      <- NormalizeData(object = scRNA)
+  train_scRNA                <- GSE176068_tumor_train_scRNA
+  features                   <- intersect(rownames(scRNA),rownames(train_scRNA))
+  features                   <- intersect(features,temp_allgenes)
+  scRNA                      <- scRNA[features, ]
+  train_scRNA                <- train_scRNA[features, ]
+  identical(rownames(scRNA),rownames(train_scRNA))
+  scRNA.combined             <- merge(scRNA,train_scRNA)
+  scRNA.combined             <- ScaleData(scRNA.combined, features=temp_allgenes)
+  tocalc                     <- as.data.frame(scRNA.combined@assays$RNA@scale.data)
+  #calculate mean scsubtype scores
+  outdat <- matrix(0,
+                   nrow=length(SCsubtype_signature_genes),
+                   ncol=ncol(tocalc),
+                   dimnames=list(names(SCsubtype_signature_genes),
+                                 colnames(tocalc)))
+  for(j in 1:length(SCsubtype_signature_genes)){
+    row    <- as.character(SCsubtype_signature_genes[[j]])
+    row    <- unique(row[row != ""])
+    genes  <- which(rownames(tocalc) %in% row)
+    temp   <- apply(tocalc[genes,],2,function(x){mean(as.numeric(x),na.rm=TRUE)})
+    outdat[j,] <- as.numeric(temp)
+  }
+  final          <- outdat[which(rowSums(outdat,na.rm=TRUE)!=0),]
+  final          <- as.data.frame(final)
+  is.num         <- sapply(final, is.numeric)
+  final[is.num]  <- lapply(final[is.num], round, 4)
+  finalm         <- as.matrix(final)
+  ##Obtaining the highest call
+  finalmt                      <- as.data.frame(t(finalm))
+  scale_scscore                <- center_sweep(finalmt)
+  scsubtype                    <- colnames(scale_scscore)[max.col(scale_scscore,ties.method="first")]
+  scale_scscore$SCSubtypeCall  <- scsubtype
+  scale_scscore$org.ident      <- scRNA.combined$orig.ident
+  test_scscore                 <- subset(scale_scscore,org.ident==A)
+  test_Subtype                 <- table(test_scscore$SCSubtypeCall) %>% as.data.frame() 
+  colnames(test_Subtype)[2]    <- GSE173634_info_pam50[i,3] 
+  colnames(test_Subtype)[1]    <- "subtype"
+  if (is.null(GSE173634_subtype_result)) {
+    GSE173634_subtype_result   <- test_Subtype
+  } else {
+    GSE173634_subtype_result   <- merge(GSE173634_subtype_result, test_Subtype,by="subtype",all=T)
+  }
+}
+
+rown                                    <- as.character(GSE173634_subtype_result$subtype)
+GSE173634_subtype_result                <- GSE173634_subtype_result[,-1]    
+rownames(GSE173634_subtype_result)      <- rown
+GSE173634_subtype_result                <- as.matrix(GSE173634_subtype_result)  %>% t()  %>% as.data.frame()
+GSE173634_subtype_result                <- cbind(GSE173634_info_pam50[,2],GSE173634_subtype_result)
+GSE173634_subtype_result$total_numbers  <- apply(GSE173634_subtype_result[,2:4],1,function(x){sum(x,na.rm =T)})
+GSE173634_subtype_basal                 <- subset(GSE173634_subtype_result,lineage_molecular_subtype=="basal_A")
+GSE173634_subtype_basal$ratio           <- GSE173634_subtype_basal$Basal_SC/GSE173634_subtype_basal$total_numbers
+GSE173634_subtype_her2                  <- subset(GSE173634_subtype_result,lineage_molecular_subtype=="HER2_amp")
+GSE173634_subtype_her2$ratio            <- GSE173634_subtype_her2$Her2E_SC/GSE173634_subtype_her2$total_numbers
+GSE173634_subtype_luminal               <- subset(GSE173634_subtype_result,lineage_molecular_subtype=="luminal")
+GSE173634_subtype_luminal$ratio         <- GSE173634_subtype_luminal$LumB_SC/GSE173634_subtype_luminal$total_numbers
+GSE173634_subtype                       <- rbind(GSE173634_subtype_basal,GSE173634_subtype_her2)
+GSE173634_subtype                       <- rbind(GSE173634_subtype,GSE173634_subtype_luminal)
+GSE173634_subtype$celllines_name        <- rownames(GSE173634_subtype)
+GSE173634_subtype                       <- arrange(GSE173634_subtype,lineage_molecular_subtype)
+GSE173634_subtype[GSE173634_subtype$lineage_molecular_subtype=="basal_A",1]  <- c(rep("Basal",11))
+GSE173634_subtype[GSE173634_subtype$lineage_molecular_subtype=="luminal",1]  <- c(rep("Luminal",8))
+GSE173634_SCsubtype_subtype                         <- GSE173634_subtype
+GSE173634_SCsubtype_subtype[is.na(GSE173634_SCsubtype_subtype$ratio),6] <- 0
+save(GSE173634_SCsubtype_subtype,file = "Pro_TNBC/paper/data/results/section_3/GSE173634_SCsubtype_subtype.RData")
+
+
+
+######*predicting the single cell RNAseq of cell lines(GSE202771) by SCSubtype ####
+load("Pro_TNBC/output/data/scRNASeq/GSE202771/GSE202771_scRNA.RData")
+load("Pro_TNBC/data/CCLE/scRNAseq/GSE202771_infor.RData")
+temp_allgenes           <- c(as.vector(SCsubtype_signature_genes$Basal_SC),
+                             as.vector(SCsubtype_signature_genes$Her2E_SC),
+                             as.vector(SCsubtype_signature_genes$LumA_SC),
+                             as.vector(SCsubtype_signature_genes$LumB_SC))
+temp_allgenes           <- unique(temp_allgenes[!temp_allgenes == ""])
+GSE202771_infor_pam50   <- subset(GSE202771_infor,lineage_molecular_subtype=="basal_A"|lineage_molecular_subtype=="luminal")
+GSE202771_subtype_result        <- NULL
+for (i in 1:nrow(GSE202771_infor_pam50)) {
+  A                          <- GSE202771_infor_pam50[i,1] %>% as.character()
+  molecular_subtype          <- GSE202771_infor_pam50[i,4] %>% as.character()
+  scRNA                      <- subset(GSE202771_scRNA, orig.ident == A)
+  scRNA                      <- NormalizeData(object = scRNA)
+  features                   <- intersect(rownames(scRNA),rownames(GSE176068_tumor_train_scRNA))
+  scRNA                      <- scRNA[features, ]
+  train_scRNA                <- GSE176068_tumor_train_scRNA
+  train_scRNA                <- train_scRNA[features, ]
+  identical(rownames(scRNA),rownames(train_scRNA))
+  scRNA.combined             <- merge(scRNA,train_scRNA)
+  scRNA.combined             <- ScaleData(scRNA.combined, features=temp_allgenes)
+  tocalc                     <- as.data.frame(scRNA.combined@assays$RNA@scale.data)
+  #calculate mean scsubtype scores
+  outdat <- matrix(0,
+                   nrow=length(SCsubtype_signature_genes),
+                   ncol=ncol(tocalc),
+                   dimnames=list(names(SCsubtype_signature_genes),
+                                 colnames(tocalc)))
+  for(j in 1:length(SCsubtype_signature_genes)){
+    row    <- as.character(SCsubtype_signature_genes[[j]])
+    row    <- unique(row[row != ""])
+    genes  <- which(rownames(tocalc) %in% row)
+    temp   <- apply(tocalc[genes,],2,function(x){mean(as.numeric(x),na.rm=TRUE)})
+    outdat[j,] <- as.numeric(temp)
+  }
+  final          <- outdat[which(rowSums(outdat,na.rm=TRUE)!=0),]
+  final          <- as.data.frame(final)
+  is.num         <- sapply(final, is.numeric)
+  final[is.num]  <- lapply(final[is.num], round, 4)
+  finalm         <- as.matrix(final)
+  ##Obtaining the highest call
+  finalmt                      <- as.data.frame(t(finalm))
+  scale_scscore                <- center_sweep(finalmt)
+  scsubtype                    <- colnames(scale_scscore)[max.col(scale_scscore,ties.method="first")]
+  scale_scscore$SCSubtypeCall  <- scsubtype
+  scale_scscore$org.ident      <- scRNA.combined$orig.ident
+  test_scscore                 <- subset(scale_scscore,org.ident==A)
+  test_Subtype                 <- table(test_scscore$SCSubtypeCall) %>% as.data.frame() 
+  colnames(test_Subtype)[2]    <- GSE202771_infor_pam50[i,1] 
+  colnames(test_Subtype)[1]    <- "subtype"
+  if (is.null(GSE202771_subtype_result)) {
+    GSE202771_subtype_result <- test_Subtype
+  } else {
+    GSE202771_subtype_result <- merge(GSE202771_subtype_result, test_Subtype,by="subtype",all=T)
+  }
+}
+
+rown                                    <- as.character(GSE202771_subtype_result$subtype)
+GSE202771_subtype_result                <- GSE202771_subtype_result[,-1]    
+rownames(GSE202771_subtype_result)      <- rown
+GSE202771_subtype_result                <- as.matrix(GSE202771_subtype_result)  %>% t()  %>% as.data.frame()
+GSE202771_subtype_result                <- cbind(GSE202771_infor_pam50[,4],GSE202771_subtype_result)
+GSE202771_subtype_result$total_numbers  <- apply(GSE202771_subtype_result[,2:4],1,function(x){sum(x,na.rm =T)})
+colnames(GSE202771_subtype_result)[1]   <- "Subtype"
+GSE202771_subtype_result$Lum            <- GSE202771_subtype_result$LumA + GSE202771_subtype_result$LumB
+GSE202771_subtype_basal                 <- subset(GSE202771_subtype_result,Subtype=="basal_A")
+GSE202771_subtype_basal$ratio           <- GSE202771_subtype_basal$Basal_SC/GSE202771_subtype_basal$total_numbers
+GSE202771_subtype_luminal                   <- subset(GSE202771_subtype_result,Subtype=="luminal")
+GSE202771_subtype_luminal$ratio             <- GSE202771_subtype_luminal$LumB_SC/GSE202771_subtype_luminal$total_numbers
+GSE202771_subtype                           <- rbind(GSE202771_subtype_basal,GSE202771_subtype_luminal)
+GSE202771_subtype$celllines_name            <- rownames(GSE202771_subtype)
+GSE202771_subtype[GSE202771_subtype$Subtype=="basal_A",1]  <- c(rep("Basal",7))
+GSE202771_subtype[GSE202771_subtype$Subtype=="luminal",1]  <- c(rep("Luminal",2))
+GSE202771_SCsubtype_subtype                         <- GSE202771_subtype
+GSE202771_SCsubtype_subtype[is.na(GSE202771_SCsubtype_subtype$ratio),6] <- 0
+save(GSE202771_SCsubtype_subtype,file = "Pro_TNBC/paper/data/results/section_3/GSE202771_SCsubtype_subtype.RData")
+
+
+
+
+
+
 load("~/Pro_TNBC/paper/data/results/section_3/GSE173634_subtype_compare.RData")
 load("~/Pro_TNBC/paper/data/results/section_3/GSE202771_subtype_compare.RData")
 GSE173634_subtype_compare  <- GSE173634_subtype_compare[GSE173634_subtype_compare$celllines_name %in% brca.id,]
 GSE202771_subtype_compare  <- GSE202771_subtype_compare[GSE202771_subtype_compare$celllines_name %in% c("HCC1806_B2_scRNA"),]
 scRNAseq_UBS93_subtype_compare      <- rbind(GSE173634_subtype_compare,GSE202771_subtype_compare)
 save(scRNAseq_UBS93_subtype_compare,file = "Pro_TNBC/paper/data/results/section_3/scRNAseq_UBS93_subtype_compare.RData")
+
+
+

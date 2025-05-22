@@ -1,7 +1,10 @@
+
 ######################################################################################################
 #### calculate correlation coefficients between Claudin-low centroid and Claudin-low cells in TNBC
 ######################################################################################################
 
+
+####find the samples including claudin-low cells ####
 library(GSVA)
 load("Pro_TNBC/paper/data/method/UBS93.data.RData")
 ####GSE176078####
@@ -18,10 +21,10 @@ GSE176078_tnbc_tumorcell_exp      <-  GSE176078_exp[,colnames(GSE176078_exp) %in
 exp_ubs93                         <- as.data.frame(GSE176078_tnbc_tumorcell_exp)
 exp_ubs93$SYMBOL                  <- rownames(exp_ubs93)
 exp_ubs93                         <- merge(UBS93.data$UBS93.gene.df,exp_ubs93,by="SYMBOL")
-rown                              <- exp_ubs93$ENSEMBL
-exp_ubs93                         <- exp_ubs93[,-c(1:3)] %>% as.matrix()
-rownames(exp_ubs93)               <- rown
-predictor.res                     <- breast.cancer.predictor(expr.of.sample = exp_ubs93,
+rown                        <- exp_ubs93$ENSEMBL
+exp_ubs93                   <- exp_ubs93[,-c(1:3)] %>% as.matrix()
+rownames(exp_ubs93)         <- rown
+predictor.res               <- breast.cancer.predictor(expr.of.sample = exp_ubs93,
                                                 expr.of.centroid = UBS93.data$UBS93.centroid,
                                                 marker.gene = UBS93.data$UBS93.gene.df$ENSEMBL,
                                                 HER2.amp.signature.genes = UBS93.data$HER2.amp.signature.genes,
@@ -40,8 +43,6 @@ rown                                               <- GSE176078_TNBC_CLcormat$ce
 GSE176078_TNBC_CLcormat                            <- GSE176078_TNBC_CLcormat[,-1]
 rownames(GSE176078_TNBC_CLcormat)                  <- rown
 colnames(GSE176078_TNBC_CLcormat)[2]               <- "patient.id"
-
-
 ####GSE161529####
 load("Pro_TNBC/output/data/scRNASeq/38sample/GSE161529_TNBC/GSE161529_TNBC_scRNA.RData")
 GSE161529_TNBC_metadata                            <- GSE161529_TNBC_scRNA@meta.data
@@ -86,17 +87,21 @@ TNBC1_scRNA[["percent.mt"]]     <- PercentageFeatureSet(TNBC1_scRNA,pattern = "^
 head(TNBC1_scRNA@meta.data,5)
 VlnPlot(TNBC1_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 TNBC1_scRNA                     <- subset(TNBC1_scRNA,nFeature_RNA >0 & nFeature_RNA<7500)
+
 #normalized
 TNBC1_scRNA                     <- NormalizeData(TNBC1_scRNA)
 #features choosing
 TNBC1_scRNA                     <- FindVariableFeatures(TNBC1_scRNA,selection.method = "vst",nfeatures = 2000)#choose high variability between cells.
 #identify the 10 most highly variable genes
 top10                           <- head(VariableFeatures(TNBC1_scRNA),10)
+
 #data scaling 
 all_gene                        <- rownames(TNBC1_scRNA)
 TNBC1_scRNA                     <- ScaleData(TNBC1_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
 #linear dimensionality reduction
 TNBC1_scRNA                     <- RunPCA(TNBC1_scRNA,features = VariableFeatures(object=TNBC1_scRNA))
+
+
 #dimension selection
 TNBC1_scRNA                     <- JackStraw(TNBC1_scRNA,num.replicate = 100)
 TNBC1_scRNA                     <- ScoreJackStraw(TNBC1_scRNA,dims = 1:20)
@@ -106,12 +111,14 @@ ElbowPlot(TNBC1_scRNA,ndims = 50)#choose dims of 30
 TNBC1_scRNA                     <- FindNeighbors(TNBC1_scRNA,dims = 1:30)
 TNBC1_scRNA                     <- FindClusters(TNBC1_scRNA,resolution = 0.1)
 table(Idents(TNBC1_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 TNBC1_scRNA                     <- RunUMAP(TNBC1_scRNA,dims = 1:30)
 TNBC1_scRNA                     <- RunTSNE(TNBC1_scRNA,dims = 1:30,check_duplicates = FALSE)
 DimPlot(TNBC1_scRNA,reduction = "umap",label = T)
 DimPlot(TNBC1_scRNA,reduction = "tsne",label = T)
 save(TNBC1_scRNA,file = "Pro_TNBC/output/data/scRNASeq/Gao.et.al.2021/TNBC1/TNBC1_scRNA.RData")
+
 #run our predicter
 TNBC1_exp                         <- as.matrix(TNBC1_scRNA@assays$RNA@data) #normalied data
 TNBC1_exp_bct93                   <- as.data.frame(TNBC1_exp)
@@ -134,6 +141,7 @@ ggplot(data = TNBC1_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of TNBC1 by using all genes")
 table(TNBC1_subtype$subtype)
 
+
 ####*TNBC2####
 library(readr)
 TNBC2_matrix                    <- read.delim("Pro_TNBC/data/scRNASeq/Data_Gao2021_Breast/GSE148673_RAW/GSM4476487_combined_UMIcount_CellTypes_TNBC2.txt",sep = "\t")
@@ -147,6 +155,7 @@ TNBC2_scRNA[["percent.mt"]]     <- PercentageFeatureSet(TNBC2_scRNA,pattern = "^
 head(TNBC2_scRNA@meta.data,5)
 VlnPlot(TNBC2_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 TNBC2_scRNA                     <- subset(TNBC2_scRNA,nFeature_RNA >0 & nFeature_RNA<7500)
+
 #normalized
 TNBC2_scRNA                     <- NormalizeData(TNBC2_scRNA)
 #features choosing
@@ -156,6 +165,7 @@ top10                           <- head(VariableFeatures(TNBC2_scRNA),10)
 #data scaling 
 all_gene                        <- rownames(TNBC2_scRNA)
 TNBC2_scRNA                     <- ScaleData(TNBC2_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+
 #linear dimensionality reduction
 TNBC2_scRNA                     <- RunPCA(TNBC2_scRNA,features = VariableFeatures(object=TNBC2_scRNA))
 #dimension selection
@@ -167,12 +177,15 @@ ElbowPlot(TNBC2_scRNA,ndims = 50)#choose dims of 30
 TNBC2_scRNA                     <- FindNeighbors(TNBC2_scRNA,dims = 1:40)
 TNBC2_scRNA                     <- FindClusters(TNBC2_scRNA,resolution = 0.1)
 table(Idents(TNBC2_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 TNBC2_scRNA                     <- RunUMAP(TNBC2_scRNA,dims = 1:40)
 TNBC2_scRNA                     <- RunTSNE(TNBC2_scRNA,dims = 1:40,check_duplicates = FALSE)
 DimPlot(TNBC2_scRNA,reduction = "umap",label = T)
 DimPlot(TNBC2_scRNA,reduction = "tsne",label = T)
 save(TNBC2_scRNA,file = "Pro_TNBC/output/data/scRNASeq/Gao.et.al.2021/TNBC2/TNBC2_scRNA.RData")
+
+
 #run our predicter
 TNBC2_exp                         <- as.matrix(TNBC2_scRNA@assays$RNA@data) #normalied data
 TNBC2_exp_bct93                   <- as.data.frame(TNBC2_exp)
@@ -209,16 +222,20 @@ TNBC3_scRNA[["percent.mt"]]     <- PercentageFeatureSet(TNBC3_scRNA,pattern = "^
 head(TNBC3_scRNA@meta.data,5)
 VlnPlot(TNBC3_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 TNBC3_scRNA                     <- subset(TNBC3_scRNA,nFeature_RNA >0 & nFeature_RNA<7500)
+
 #normalized
 TNBC3_scRNA                     <- NormalizeData(TNBC3_scRNA)
 TNBC3_scRNA[["RNA"]]@data[c("ENSG00000167286", "ENSG00000100721", "ENSG00000156738"), 1:10]#data after normalizing
+
 #features choosing
 TNBC3_scRNA                     <- FindVariableFeatures(TNBC3_scRNA,selection.method = "vst",nfeatures = 2000)#choose high variability between cells.
 #identify the 10 most highly variable genes
 top10                           <- head(VariableFeatures(TNBC3_scRNA),10)
+
 #data scaling 
 all_gene                        <- rownames(TNBC3_scRNA)
 TNBC3_scRNA                     <- ScaleData(TNBC3_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+
 #linear dimensionality reduction
 TNBC3_scRNA                     <- RunPCA(TNBC3_scRNA,features = VariableFeatures(object=TNBC3_scRNA))
 #dimension selection
@@ -230,6 +247,7 @@ ElbowPlot(TNBC3_scRNA,ndims = 50)#choose dims of 30
 TNBC3_scRNA                     <- FindNeighbors(TNBC3_scRNA,dims = 1:50)
 TNBC3_scRNA                     <- FindClusters(TNBC3_scRNA,resolution = 0.1)
 table(Idents(TNBC3_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 TNBC3_scRNA                     <- RunUMAP(TNBC3_scRNA,dims = 1:50)
 TNBC3_scRNA                     <- RunTSNE(TNBC3_scRNA,dims = 1:50,check_duplicates = FALSE)
@@ -273,17 +291,22 @@ TNBC4_scRNA[["percent.mt"]]     <- PercentageFeatureSet(TNBC4_scRNA,pattern = "^
 head(TNBC4_scRNA@meta.data,5)
 VlnPlot(TNBC4_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 TNBC4_scRNA                     <- subset(TNBC4_scRNA,nFeature_RNA >0 & nFeature_RNA<7500)
+
 #normalized
 TNBC4_scRNA                     <- NormalizeData(TNBC4_scRNA)
 #features choosing
 TNBC4_scRNA                     <- FindVariableFeatures(TNBC4_scRNA,selection.method = "vst",nfeatures = 2000)#choose high variability between cells.
 #identify the 10 most highly variable genes
 top10                           <- head(VariableFeatures(TNBC4_scRNA),10)
+
 #data scaling 
 all_gene                        <- rownames(TNBC4_scRNA)
 TNBC4_scRNA                     <- ScaleData(TNBC4_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+
 #linear dimensionality reduction
 TNBC4_scRNA                     <- RunPCA(TNBC4_scRNA,features = VariableFeatures(object=TNBC4_scRNA))
+
+
 #dimension selection
 TNBC4_scRNA                     <- JackStraw(TNBC4_scRNA,num.replicate = 100)
 TNBC4_scRNA                     <- ScoreJackStraw(TNBC4_scRNA,dims = 1:20)
@@ -293,12 +316,14 @@ ElbowPlot(TNBC4_scRNA,ndims = 50)#choose dims of 30
 TNBC4_scRNA                     <- FindNeighbors(TNBC4_scRNA,dims = 1:40)
 TNBC4_scRNA                     <- FindClusters(TNBC4_scRNA,resolution = 0.1)
 table(Idents(TNBC4_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 TNBC4_scRNA                     <- RunUMAP(TNBC4_scRNA,dims = 1:40)
 TNBC4_scRNA                     <- RunTSNE(TNBC4_scRNA,dims = 1:40,check_duplicates = FALSE)
 DimPlot(TNBC4_scRNA,reduction = "umap",label = T)
 DimPlot(TNBC4_scRNA,reduction = "tsne",label = T)
 save(TNBC4_scRNA,file = "Pro_TNBC/output/data/scRNASeq/Gao.et.al.2021/TNBC4/TNBC4_scRNA.RData")
+
 
 #run our predicter
 TNBC4_exp                         <- as.matrix(TNBC4_scRNA@assays$RNA@data) #normalied data
@@ -323,6 +348,7 @@ ggplot(data = TNBC4_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of TNBC4 by using all genes")
 table(TNBC4_subtype$subtype)
 
+
 ####*TNBC5####
 library(readr)
 TNBC5_matrix                    <- read.delim("Pro_TNBC/data/scRNASeq/Data_Gao2021_Breast/GSE148673_RAW/GSM4476490_combined_UMIcount_CellTypes_TNBC5.txt",sep = "\t")
@@ -336,17 +362,21 @@ TNBC5_scRNA[["percent.mt"]]     <- PercentageFeatureSet(TNBC5_scRNA,pattern = "^
 head(TNBC5_scRNA@meta.data,5)
 VlnPlot(TNBC5_scRNA,features = c("nCount_RNA","nFeature_RNA","percent.mt"),ncol=3)
 TNBC5_scRNA                     <- subset(TNBC5_scRNA,nFeature_RNA >0 & nFeature_RNA<8000)
+
 #normalized
 TNBC5_scRNA                     <- NormalizeData(TNBC5_scRNA)
 #features choosing
 TNBC5_scRNA                     <- FindVariableFeatures(TNBC5_scRNA,selection.method = "vst",nfeatures = 2000)#choose high variability between cells.
 #identify the 10 most highly variable genes
 top10                           <- head(VariableFeatures(TNBC5_scRNA),10)
+
 #data scaling 
 all_gene                        <- rownames(TNBC5_scRNA)
 TNBC5_scRNA                     <- ScaleData(TNBC5_scRNA,features = all_gene)#scaled data存放在 pbmc[["RNA"]]@scale.data
+
 #linear dimensionality reduction
 TNBC5_scRNA                     <- RunPCA(TNBC5_scRNA,features = VariableFeatures(object=TNBC5_scRNA))
+
 #dimension selection
 TNBC5_scRNA                     <- JackStraw(TNBC5_scRNA,num.replicate = 100)
 TNBC5_scRNA                     <- ScoreJackStraw(TNBC5_scRNA,dims = 1:20)
@@ -356,12 +386,14 @@ ElbowPlot(TNBC5_scRNA,ndims = 50)#choose dims of 30
 TNBC5_scRNA                     <- FindNeighbors(TNBC5_scRNA,dims = 1:30)
 TNBC5_scRNA                     <- FindClusters(TNBC5_scRNA,resolution = 0.1)
 table(Idents(TNBC5_scRNA))
+
 #unlinear dimension reduction(UMAP or tSNE)
 TNBC5_scRNA                     <- RunUMAP(TNBC5_scRNA,dims = 1:30)
 TNBC5_scRNA                     <- RunTSNE(TNBC5_scRNA,dims = 1:30,check_duplicates = FALSE)
 DimPlot(TNBC5_scRNA,reduction = "umap",label = T)
 DimPlot(TNBC5_scRNA,reduction = "tsne",label = T)
 save(TNBC5_scRNA,file = "Pro_TNBC/output/data/scRNASeq/Gao.et.al.2021/TNBC5/TNBC5_scRNA.RData")
+
 
 #run our predicter
 TNBC5_exp                         <- as.matrix(TNBC5_scRNA@assays$RNA@data) #normalied data
@@ -385,7 +417,6 @@ TNBC5_uamp                        <- merge(TNBC5_uamp,TNBC5_subtype,by="sample.i
 ggplot(data = TNBC5_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of TNBC5 by using all genes")
 table(TNBC5_subtype$subtype)
-
 
 ####Qian et al. 2020####
 ####*sc5rJUQ033####
@@ -413,10 +444,14 @@ sc5rJUQ033_tumor_uamp                        <- merge(sc5rJUQ033_tumor_uamp,sc5r
 ggplot(data = sc5rJUQ033_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of sc5rJUQ033_tumor by using all genes")
 table(sc5rJUQ033_tumor_subtype$subtype)
+
+
+
 sc5rJUQ033_cl_id                             <- sc5rJUQ033_tumor_subtype[sc5rJUQ033_tumor_subtype$subtype=="Claudin_low",]$sample.id
 sc5rJUQ033_cl_cor                            <- sc5rJUQ033_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 sc5rJUQ033_cl_cor                            <- sc5rJUQ033_cl_cor[rownames(sc5rJUQ033_cl_cor) %in%sc5rJUQ033_cl_id,,drop=F]
 sc5rJUQ033_cl_cor$patient.id                 <- rep("sc5rJUQ033",length(sc5rJUQ033_cl_id))
+
 
 ####*sc5rJUQ039####
 load("~/Pro_TNBC/output/data/scRNASeq/Qian_et_2020/sc5rJUQ039_scRNA/sc5rJUQ039_scRNA.RData")
@@ -443,6 +478,7 @@ sc5rJUQ039_tumor_uamp                        <- merge(sc5rJUQ039_tumor_uamp,sc5r
 ggplot(data = sc5rJUQ039_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of sc5rJUQ039_tumor by using all genes")
 table(sc5rJUQ039_tumor_subtype$subtype)
+
 sc5rJUQ039_cl_id                             <- sc5rJUQ039_tumor_subtype[sc5rJUQ039_tumor_subtype$subtype=="Claudin_low",]$sample.id
 sc5rJUQ039_cl_cor                            <- sc5rJUQ039_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 sc5rJUQ039_cl_cor                            <- sc5rJUQ039_cl_cor[rownames(sc5rJUQ039_cl_cor) %in%sc5rJUQ039_cl_id,,drop=F]
@@ -473,6 +509,7 @@ sc5rJUQ042_tumor_uamp                        <- merge(sc5rJUQ042_tumor_uamp,sc5r
 ggplot(data = sc5rJUQ042_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of sc5rJUQ042_tumor by using all genes")
 table(sc5rJUQ042_tumor_subtype$subtype)
+ 
 sc5rJUQ042_cl_id                             <- sc5rJUQ042_tumor_subtype[sc5rJUQ042_tumor_subtype$subtype=="Claudin_low",]$sample.id
 sc5rJUQ042_cl_cor                            <- sc5rJUQ042_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 sc5rJUQ042_cl_cor                            <- sc5rJUQ042_cl_cor[rownames(sc5rJUQ042_cl_cor) %in%sc5rJUQ042_cl_id,,drop=F]
@@ -503,6 +540,7 @@ sc5rJUQ045_tumor_uamp                        <- merge(sc5rJUQ045_tumor_uamp,sc5r
 ggplot(data = sc5rJUQ045_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of sc5rJUQ045_tumor by using all genes")
 table(sc5rJUQ045_tumor_subtype$subtype)
+
 sc5rJUQ045_cl_id                             <- sc5rJUQ045_tumor_subtype[sc5rJUQ045_tumor_subtype$subtype=="Claudin_low",]$sample.id
 sc5rJUQ045_cl_cor                            <- sc5rJUQ045_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 sc5rJUQ045_cl_cor                            <- sc5rJUQ045_cl_cor[rownames(sc5rJUQ045_cl_cor) %in%sc5rJUQ045_cl_id,,drop=F]
@@ -533,6 +571,7 @@ sc5rJUQ053_tumor_uamp                        <- merge(sc5rJUQ053_tumor_uamp,sc5r
 ggplot(data = sc5rJUQ053_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of sc5rJUQ053_tumor by using all genes")
 table(sc5rJUQ053_tumor_subtype$subtype)
+
 sc5rJUQ053_cl_id                             <- sc5rJUQ053_tumor_subtype[sc5rJUQ053_tumor_subtype$subtype=="Claudin_low",]$sample.id
 sc5rJUQ053_cl_cor                            <- sc5rJUQ053_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 sc5rJUQ053_cl_cor                            <- sc5rJUQ053_cl_cor[rownames(sc5rJUQ053_cl_cor) %in%sc5rJUQ053_cl_id,,drop=F]
@@ -567,10 +606,12 @@ PT039_tumor_uamp                        <- merge(PT039_tumor_uamp,PT039_tumor_su
 ggplot(data = PT039_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of PT039_tumor by using all genes")
 table(PT039_tumor_subtype$subtype)
+
 PT039_cl_id                             <- PT039_tumor_subtype[PT039_tumor_subtype$subtype=="Claudin_low",]$sample.id
 PT039_cl_cor                            <- PT039_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 PT039_cl_cor                            <- PT039_cl_cor[rownames(PT039_cl_cor) %in%PT039_cl_id,,drop=F]
 PT039_cl_cor$patient.id                 <- rep("PT039",length(PT039_cl_id))
+
 
 ####*PT084####
 load("~/Pro_TNBC/output/data/scRNASeq/Karaayvas_et_2018/PT084/PT084_scRNA.RData")
@@ -597,6 +638,7 @@ PT084_tumor_uamp                        <- merge(PT084_tumor_uamp,PT084_tumor_su
 ggplot(data = PT084_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of PT084_tumor by using all genes")
 table(PT084_tumor_subtype$subtype)
+
 PT084_cl_id                             <- PT084_tumor_subtype[PT084_tumor_subtype$subtype=="Claudin_low",]$sample.id
 PT084_cl_cor                            <- PT084_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 PT084_cl_cor                            <- PT084_cl_cor[rownames(PT084_cl_cor) %in%PT084_cl_id,,drop=F]
@@ -627,6 +669,7 @@ PT089_tumor_uamp                        <- merge(PT089_tumor_uamp,PT089_tumor_su
 ggplot(data = PT089_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of PT089_tumor by using all genes")
 table(PT089_tumor_subtype$subtype)
+
 PT089_cl_id                             <- PT089_tumor_subtype[PT089_tumor_subtype$subtype=="Claudin_low",]$sample.id
 PT089_cl_cor                            <- PT089_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 PT089_cl_cor                            <- PT089_cl_cor[rownames(PT089_cl_cor) %in%PT089_cl_id,,drop=F]
@@ -657,11 +700,11 @@ PT126_tumor_uamp                        <- merge(PT126_tumor_uamp,PT126_tumor_su
 ggplot(data = PT126_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of PT126_tumor by using all genes")
 table(PT126_tumor_subtype$subtype)
+
 PT126_cl_id                             <- PT126_tumor_subtype[PT126_tumor_subtype$subtype=="Claudin_low",]$sample.id
 PT126_cl_cor                            <- PT126_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 PT126_cl_cor                            <- PT126_cl_cor[rownames(PT126_cl_cor) %in%PT126_cl_id,,drop=F]
 PT126_cl_cor$patient.id                 <- rep("PT126",length(PT126_cl_id))
-
 
 ####GSE138536####
 GSE138536_HBC_metadata              <- read.delim("Pro_TNBC/data/scRNASeq/GSE138536/GSE138536_HBC_metadata.txt",sep = "\t")
@@ -670,7 +713,6 @@ GSE138536_TNBC_tumor                <- subset(GSE138536_TNBC_metadata,GSE138536_
 GSE138536_HBC_TPM                   <- read.delim("Pro_TNBC/data/scRNASeq/GSE138536/GSE138536_HBC_TranscriptMatrixSalmon_TPM.txt",sep = "\t")
 GSE138536_HBC_TPM                   <- as.matrix(GSE138536_HBC_TPM)
 save(GSE138536_HBC_TPM,file = "Pro_TNBC/data/scRNASeq/GSE138536/GSE138536_HBC_TPM.RData")
-
 ####*SU4####
 SU4_tumor_metadata                  <- subset(GSE138536_TNBC_tumor,GSE138536_TNBC_tumor$Patient=="SU4")
 SU4_TPM                             <- GSE138536_HBC_TPM[,colnames(GSE138536_HBC_TPM) %in% SU4_tumor_metadata$UniqueID]
@@ -711,7 +753,6 @@ SU4_cl_id                             <- SU4_tumor_subtype[SU4_tumor_subtype$sub
 SU4_cl_cor                            <- SU4_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 SU4_cl_cor                            <- SU4_cl_cor[rownames(SU4_cl_cor) %in%SU4_cl_id,,drop=F]
 SU4_cl_cor$patient.id                 <- rep("SU4",length(SU4_cl_id))
-
 ####*SU58####
 SU58_tumor_metadata                  <- subset(GSE138536_TNBC_tumor,GSE138536_TNBC_tumor$Patient=="SU58")
 SU58_TPM                             <- GSE138536_HBC_TPM[,colnames(GSE138536_HBC_TPM) %in% SU58_tumor_metadata$UniqueID]
@@ -747,6 +788,7 @@ SU58_tumor_uamp                        <- merge(SU58_tumor_uamp,SU58_tumor_subty
 ggplot(data = SU58_tumor_uamp,aes(x=UMAP_1,y=UMAP_2,col=subtype))+
   geom_point()+ggtitle("UAMP plot of SU58_tumor by using all genes")
 table(SU58_tumor_subtype$subtype)
+
 SU58_cl_id                              <- SU58_tumor_subtype[SU58_tumor_subtype$subtype=="Claudin_low",]$sample.id
 SU58_cl_cor                             <- SU58_tumor_cell_subtype$cor.matrix[ ,2,drop=F] %>% as.data.frame()
 SU58_cl_cor                             <- SU58_cl_cor[rownames(SU58_cl_cor) %in%SU58_cl_id,,drop=F]
@@ -779,7 +821,7 @@ for (i in 1:length(patient_id)) {
   tumor_exp_bct93                   <- as.data.frame(tumor_scRNA@assays$RNA@data)
   tumor_exp_bct93$SYMBOL            <- rownames(tumor_exp_bct93)
   tumor_exp_bct93                   <- merge(UBS93.data$UBS93.gene.df,tumor_exp_bct93,by="SYMBOL")
-  rown                               <- tumor_exp_bct93$ENSEMBL
+  rown                                       <- tumor_exp_bct93$ENSEMBL
   tumor_exp_bct93                   <- tumor_exp_bct93[,-c(1:3)] %>% as.matrix()
   rownames(tumor_exp_bct93)         <- rown
   predictor.res                     <- breast.cancer.predictor(expr.of.sample = tumor_exp_bct93,
@@ -816,7 +858,8 @@ BIOKEY_metaData_cohort2_web            <- read_csv("Pro_TNBC/data/scRNASeq/Data_
 BIOKEY_metaData_cohort2_TNBC           <- subset(BIOKEY_metaData_cohort2_web,BC_type=="TNBC")
 table(BIOKEY_metaData_cohort2_TNBC$patient_id)
 
-patient_id                             <- c("BIOKEY_33" , "BIOKEY_35", "BIOKEY_36", "BIOKEY_39", "BIOKEY_41")
+patient_id                             <- c("BIOKEY_33" , "BIOKEY_35", "BIOKEY_36", "BIOKEY_39",
+                                   "BIOKEY_41")
 Bassez_subtype_result_2                <- NULL
 for (i in 1:length(patient_id)) {
   A                   <- patient_id[i] %>% as.character()
@@ -936,4 +979,5 @@ table(Bassez_CL_cor$patient.id)
 Bassez_CL_cor                    <- Bassez_CL_cor[,-2]
 TNBC_CL_cor                      <- bind_rows(Bassez_CL_cor,Qian_cl_cor,GSE118389_cl_cor,GSE176078_TNBC_CLcormat,GSE161529_TNBC_CLcormat)
 save(TNBC_CL_cor,file = "Pro_TNBC/paper/data/results/section_4/TNBC/TNBC_CL_cor.RData")
+
 

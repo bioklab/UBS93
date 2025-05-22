@@ -14,9 +14,9 @@ figS1a                               <- ggplot(mean_score,aes(x=rank,y=S_mean))+
   geom_point(size=6,show.legend = F)+ggplot.style+xlab(paste("rank",sep = "\n","(n=27719)"))+ylab("score")+
   scale_x_continuous(limits = c(0, 28000),breaks = seq(0,28000,5000))+
   geom_quantile(data = mean_score, mapping = aes(
-    x = rank, y = S_mean,color="red",linewidth = 1),quantiles = 0.5,show.legend = F)+
+    x = rank, y = S_mean),color="#00B4B4",linewidth = 3,quantiles = 0.5,show.legend = F)+
   theme(panel.grid.major=element_line(colour=NA),
-        panel.grid.minor = element_blank())+geom_vline(aes(xintercept=25000,color="blue",linewidth=1))
+        panel.grid.minor = element_blank())+geom_vline(xintercept=25000,color="red",linewidth=3)
 ggsave(figS1a,filename = "Pro_TNBC/paper/plot/method/the.rank.charts.of.S_mean.pdf",width=20,height=15)
 mean_score_2720                       <- mean_score[25000:27719,]
 mean_score_2720$rank                  <- (1: length(mean_score_2720$S_mean))
@@ -25,10 +25,10 @@ figS1b                               <- ggplot(mean_score_2720,aes(x=rank,y=S_me
   xlab(paste("rank",sep = "\n","(n=2720)"))+ylab("score")+
   scale_x_continuous(limits = c(0, 2800),breaks = seq(0,2800,500))+ 
   geom_quantile(data = mean_score_2720, 
-                mapping = aes(x = rank, y = S_mean,color="red",linewidth = 1),
+                mapping = aes(x = rank, y = S_mean),color="#00B4B4",linewidth = 3,
                 quantiles = 0.5,show.legend = F)+
   theme(panel.grid.major=element_line(colour=NA),
-        panel.grid.minor = element_blank())+geom_vline(aes(xintercept=2220,color="blue",linewidth=1))
+        panel.grid.minor = element_blank())+geom_vline(xintercept=2220,color="red",linewidth=3)
 ggsave(figS1b,filename = "Pro_TNBC/paper/plot/method/the.second.rank.charts.of.S_mean.pdf",width=20,height=15)
 mean_score_500                       <- mean_score_2720[2221:2720,]
 mean_score_500$rank                  <- (1: length(mean_score_500$S_mean))
@@ -37,10 +37,10 @@ figS1c                              <- ggplot(mean_score_500,aes(x=rank,y=S_mean
   xlab(paste("rank",sep = "\n","(n=500)"))+ylab("score")+
   scale_x_continuous(limits = c(0, 500),breaks = seq(0,500,100))+ 
   geom_quantile(data = mean_score_500, 
-                mapping = aes(x = rank, y = S_mean,color="red",linewidth = 1),
+                mapping = aes(x = rank, y = S_mean),color="#00B4B4",linewidth = 3,
                 quantiles = 0.5,show.legend = F)+
   theme(panel.grid.major=element_line(colour=NA),
-        panel.grid.minor = element_blank())+geom_vline(aes(xintercept=400,color="blue",linewidth = 1))
+        panel.grid.minor = element_blank())+geom_vline(xintercept=400,color="red",linewidth = 3)
 ggsave(figS1c,filename = "Pro_TNBC/paper/plot/method/the.third.rank.charts.of.S_mean.pdf",width=20,height=15)
 top100_gene           <- mean_score_500[401:500,]$gene
 ensembl               <- bitr(top100_gene,fromType = "SYMBOL",toType = "ENSEMBL",OrgDb = "org.Hs.eg.db")

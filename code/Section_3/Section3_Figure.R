@@ -39,7 +39,7 @@ library(ggplot2)
 load("Pro_TNBC/output/data/scRNASeq/26_sample/pam50.gene/PAM50.gene.name.RData")
 load("~/Pro_TNBC/output/data/scRNASeq/26_sample/pam50.gene/PAM50.gene.name.RData")
 mean_score         <- read_csv("Pro_TNBC/paper/data/results/section_1/mean_score.csv")
-UBS93_score        <- mean_score[mean_score$gene %in% UBS93.gene.df$SYMBOL,]
+UBS93_score        <- mean_score[mean_score$gene %in% UBS93.data$UBS93.gene.df$SYMBOL,]
 PAM50_score        <- mean_score[mean_score$gene %in% pam50.gene,]
 UBS93_pam50_score  <- data.frame(s_mean=c(UBS93_score$S_mean,PAM50_score$S_mean),group=c(rep("UBS93_score",93),rep("pam50_gene",50)))
 UBS93_pam50_score$group  <- factor(UBS93_pam50_score$group,levels = c("pam50_gene","UBS93_score"))
@@ -53,14 +53,6 @@ fig_3a <- ggboxplot(UBS93_pam50_score ,x = "group",y = "s_mean",add = "point",si
 ggsave(fig_3a,filename = "Pro_TNBC/paper/plot/section_3/the.score.of.UBS93.gene.panel.and.pam50.gene.panel.pdf",width=20,height=15)
 wilcox.test(s_mean~group,data = UBS93_pam50_score)#p-value < 2.2e-16
 save(UBS93_pam50_score,file="Pro_TNBC/paper/data/section_3/fig3a.UBS93.pam50.score.RData")
-
-
-
-
-
-
-
-
 
 
 

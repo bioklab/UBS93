@@ -1,3 +1,4 @@
+
 ####################################################################################
 ####Identification of Claudin-low cancer cells in Basal-like cell line and patient
 ####################################################################################
@@ -24,33 +25,28 @@ ggsave(fig_4a,filename = "Pro_TNBC/paper/plot/section_4/tsne.plot.of.HDQP1.by.us
 
 ####*Figure 4b: the valcano plot of different expression genes in HDQP1 cell line (GSE173634)####
 load("Pro_TNBC/paper/data/results/section_5/de_results_HDQP1_GSE173634_deseq2.RData")
-marker_genes                               <- c("CLDN3","CLDN4","CLDN7","EPCAM","VIM","CD24","CD44")
-de_results_HDQP1_GSE173634                 <- within(de_results_HDQP1_GSE173634,{
-  sig                                      <- NA
-  sig[p_val_adj < 0.05 &avg_log2FC >0.5]   <- "up"
-  sig[p_val_adj < 0.05 &avg_log2FC < -0.5] <- "down"
-})
+marker_genes                               <- c("CLDN3","CLDN4","CLDN7","EPCAM","VIM","CD24","CD44","KRT19")
 
-fig5b                                            <- ggplot(de_results_HDQP1_GSE173634,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
+fig5b                                            <- ggplot(de_results_HDQP1_GSE173634_wilcox,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black")+
   geom_vline(xintercept = c(-0.5,0.5), linetype = "dashed", color = "black")+
   geom_point(size=5)+
   scale_color_manual(values=c("#2f5688","#BBBBBB","#CC0000"))+
   scale_size_continuous(range = c(0,1))+
   theme(legend.title = element_blank() )+
-  geom_label_repel(data = subset(de_results_HDQP1_GSE173634, SYMBOL %in% marker_genes),
+  geom_label_repel(data = subset(de_results_HDQP1_GSE173634_wilcox, SYMBOL %in% marker_genes),
                    max.overlaps = getOption("ggrepel.max.overlaps", default = 20),
                    aes(label = SYMBOL),
-                   size = 8, 
+                   size = 12, 
                    color = 'black',
-                   fontface="italic",
+                   fontface="bold.italic",
                    segment.color = "black",   
                    segment.linetype = "solid", 
                    segment.size = 0.5 ,
                    box.padding = 3,        
                    point.padding = 0.2 ) +
-  xlab("log2fc")+
-  ylab("-log10p-adjust")+ggplot.style
+  xlab("log2FC")+
+  ylab("-log10 p-adj")+ggplot.style+xlim(-10,10)
 
 ggsave(fig5b,filename = "Pro_TNBC/paper/plot/section_4/HDQP1_GSE173634/Volcano.map.of.GSE173634.HDQP1.pdf",width = 20,height = 15)
 
@@ -58,7 +54,7 @@ ggsave(fig5b,filename = "Pro_TNBC/paper/plot/section_4/HDQP1_GSE173634/Volcano.m
 library(clusterProfiler)
 library(enrichplot)
 library(msigdbr)
-alldiff               <- subset(de_results_HDQP1_GSE173634,sig=="up"|sig=="down")
+alldiff               <- subset(de_results_HDQP1_GSE173634_wilcox,sig=="up"|sig=="down")
 alldiff               <- alldiff[order(alldiff$avg_log2FC,decreasing = T),]
 genelist              <- alldiff$avg_log2FC
 names(genelist)       <- alldiff$SYMBOL
@@ -71,28 +67,19 @@ GSE173634.HDQP1.gsea.re              <- GSEA(genelist,
                 TERM2GENE = hallmark,  
                 pvalueCutoff = 1 , 
                 pAdjustMethod='BH')  
-pdf("Pro_TNBC/paper/plot/section_4/HDQP1_GSE173634/gsea.EMT.pdf",width =12,height =12)
-p1 <- gseaplot2(GSE173634.HDQP1.gsea.re,
-          GSE173634.HDQP1.gsea.re$ID,
-                    color = "red",
-                    base_size = 20,
-                    rel_heights = c(1.5, 0.5, 1),
-                    subplots =1,
-                    ES_geom = "line",
-                    pvalue_table = F)
-p2 <- gseaplot2(GSE173634.HDQP1.gsea.re,
-                GSE173634.HDQP1.gsea.re$ID,
-                color = "red",
-                base_size = 20,
-                rel_heights = c(1.5, 0.5, 1),
-                subplots =2,
-                ES_geom = "line",
-                pvalue_table = F)
-p3 <- plot_grid(p1,p2,ncol = 1)
-ggsave(p3,filename ="Pro_TNBC/paper/plot/section_4/HDQP1_GSE173634/gsea.EMT.pdf",width =12,height =12)
-
 save(GSE173634.HDQP1.gsea.re,file = "Pro_TNBC/paper/data/results/section_4/GSE173634.HDQP1.gsea.re.RDa")
 
+pdf("Pro_TNBC/paper/plot/section_4/HDQP1_GSE173634/gsea.EMT.pdf",width =12,height =12)
+gseaplot2(GSE173634.HDQP1.gsea.re,
+          GSE173634.HDQP1.gsea.re$ID,
+          color = "red",
+          base_size = 20,
+          rel_heights = c(1.5, 0.5, 1),
+          subplots =1:2,
+          ES_geom = "line",
+          pvalue_table = F)
+dev.off()
+#p-value = 0.01103479
 
 ####*Figure 4d: CD44/CD24 ratio BL and CL cells in GSE173634 HDQP1####
 library(ggpubr)
@@ -121,7 +108,7 @@ brca_info             <- brca_info[!is.na(brca_info$lineage_molecular_subtype),]
 CL.df                 <- merge(CL.df,brca_info[,c(2,5,22)],by="CCLE_Name")
 CL.df$subtype         <- ifelse(CL.df$lineage_molecular_subtype=="basal_B","Claudin-low",
                                 ifelse(CL.df$lineage_molecular_subtype=="basal_A","Basal-like","Others"))
-CL.df[is.na(CL.df$subtype),7]  <- "Others"
+CL.df[is.na(CL.df$subtype),7]               <- "Others"
 CL.df$HDQP1_GSE173634_CL_rank               <- rank(CL.df$HDQP1_GSE173634_CL) 
 CL.df                 <- CL.df[order(CL.df$HDQP1_GSE173634_CL_rank,decreasing = F),]
 fig1e <- ggplot(CL.df, aes(x = HDQP1_GSE173634_CL_rank, y = HDQP1_GSE173634_CL,color=subtype)) +
@@ -135,7 +122,7 @@ fig1e <- ggplot(CL.df, aes(x = HDQP1_GSE173634_CL_rank, y = HDQP1_GSE173634_CL,c
   theme(panel.grid = element_blank())+
   geom_text_repel(data = CL.df[46:50,], 
                   aes(label = stripped_cell_line_name), 
-                  nudge_y = 0.08,  # 标签在纵坐标上的偏移量
+                  nudge_y = 0.08,  
                   color = "black",
                   size = 6,
                   arrow = arrow(length = unit(0.02, "npc")))
@@ -252,25 +239,25 @@ ggsave(fig_4c,filename = "Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/tsne.plo
 ####*Figure 5b: the valcano plot of different expression genes in TNBC 0554####
 load("Pro_TNBC/paper/data/results/section_5/de_results_TNBC0554_deseq2.RData")
 library(ggrepel)
-fig5a                                     <- ggplot(de_results_TNBC0554,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
+fig5a                                     <- ggplot(de_results_TNBC0554_wilcox,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black")+
   geom_vline(xintercept = c(-0.5,0.5), linetype = "dashed", color = "black")+
   geom_point(size=5)+
   scale_color_manual(values=c("#2f5688","#BBBBBB","#CC0000"))+
   scale_size_continuous(range = c(0,1))+
   theme(legend.title = element_blank() )+
-  geom_label_repel(data = subset(de_results_TNBC0554, SYMBOL %in% marker_genes),
+  geom_label_repel(data = subset(de_results_TNBC0554_wilcox, SYMBOL %in% marker_genes),
                    max.overlaps = getOption("ggrepel.max.overlaps", default = 20),
                    aes(label = SYMBOL),
-                   size = 8, 
-                   color = 'black',fontface = "italic",
+                   size = 12, 
+                   color = 'black',fontface = "bold.italic",
                    segment.color = "black",   
                    segment.linetype = "solid", 
                    segment.size = 0.5 ,
                    box.padding = 3,        
                    point.padding = 0.2 ) +
-  xlab("log2fc")+
-  ylab("-log10padjust")+ggplot.style
+  xlab("log2FC")+
+  ylab("-log10 p-adj")+ggplot.style+xlim(-10,10)
 
 ggsave(fig5a,filename = "Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/Volcano.map.of.0554.pdf",width = 20,height = 15)
 
@@ -278,7 +265,7 @@ ggsave(fig5a,filename = "Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/Volcano.m
 library(clusterProfiler)
 library(enrichplot)
 library(msigdbr)
-alldiff               <- subset(de_results_TNBC0554,sig=="up"|sig=="down")
+alldiff               <- subset(de_results_TNBC0554_wilcox,sig=="up"|sig=="down")
 alldiff               <- alldiff[order(alldiff$avg_log2FC,decreasing = T),]
 
 genelist              <- alldiff$avg_log2FC
@@ -311,6 +298,18 @@ p2 <- gseaplot2(TNBC0554.gsea.re,
 p3 <- plot_grid(p1,p2,ncol = 1)
 ggsave(p3,filename ="Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/gsea.EMT.pdf",width =12,height =12)
 save(TNBC0554.gsea.re,file = "Pro_TNBC/paper/data/results/section_4/TNBC0554.gsea.re.RData")
+
+pdf("Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/gsea.EMT.pdf",width =12,height =12)
+gseaplot2(TNBC0554.gsea.re,
+          TNBC0554.gsea.re$ID,
+          color = "red",
+          base_size = 20,
+          rel_heights = c(1.5, 0.5, 1),
+          subplots =1:2,
+          ES_geom = "line",
+          pvalue_table = F)
+dev.off()
+#p-value = 1.54e-09
 
 
 ####*Figure 5d: CD44/CD24 ratio BL and CL cells in GSE173634 HDQP1####
@@ -482,19 +481,19 @@ ggsave(fig_4a,filename = "Pro_TNBC/paper/plot/section_4/HDQP1_GSE202771/tsne.plo
 ####*Figure S4b: the valcano plot of different expression genes in HDQP1 cell line (GSE173634)####
 library(ggrepel)
 load("Pro_TNBC/paper/data/results/section_5/de_results_HDQP1_GSE202771_deseq2.RData")
-marker_genes                               <- c("CLDN3","CLDN4","CLDN7","EPCAM","VIM","CD24","CD44")
-
-fig5b                                            <- ggplot(de_results_HDQP1_GSE202771,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
+marker_genes                               <- c("CLDN3","CLDN4","CLDN7","EPCAM","VIM","CD24","CD44","KRT19")
+de_results_HDQP1_GSE202771_wilcox          <- de_results_HDQP1_GSE202771_wilcox[!duplicated(de_results_HDQP1_GSE202771_wilcox$SYMBOL),]
+fig5b                                            <- ggplot(de_results_HDQP1_GSE202771_wilcox,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black")+
   geom_vline(xintercept = c(-0.5,0.5), linetype = "dashed", color = "black")+
   geom_point(size=5)+
   scale_color_manual(values=c("#2f5688","#BBBBBB","#CC0000"))+
   scale_size_continuous(range = c(0,1))+
   theme(legend.title = element_blank() )+
-  geom_label_repel(data = subset(de_results_HDQP1_GSE202771, SYMBOL %in% marker_genes),
+  geom_label_repel(data = subset(de_results_HDQP1_GSE202771_wilcox, SYMBOL %in% marker_genes),
                    max.overlaps = getOption("ggrepel.max.overlaps", default = 20),
                    aes(label = SYMBOL),
-                   size = 8, 
+                   size = 12, 
                    color = 'black',
                    fontface="bold.italic",
                    segment.color = "black",   
@@ -502,8 +501,8 @@ fig5b                                            <- ggplot(de_results_HDQP1_GSE2
                    segment.size = 0.5 ,
                    box.padding = 3,        
                    point.padding = 0.2 ) +
-  xlab("log2fc")+
-  ylab("-log10p-adjust")+ggplot.style
+  xlab("log2FC")+
+  ylab("-log10 p-adj")+ggplot.style+xlim(-10,10)
 
 ggsave(fig5b,filename = "Pro_TNBC/paper/plot/section_4/HDQP1_GSE202771/Volcano.map.of.GSE202771.HDQP1.pdf",width = 20,height = 15)
 
@@ -511,7 +510,7 @@ ggsave(fig5b,filename = "Pro_TNBC/paper/plot/section_4/HDQP1_GSE202771/Volcano.m
 library(clusterProfiler)
 library(enrichplot)
 library(msigdbr)
-alldiff               <- subset(de_results_HDQP1_GSE202771,sig=="up"|sig=="down")
+alldiff               <- subset(de_results_HDQP1_GSE202771_wilcox,sig=="up"|sig=="down")
 alldiff               <- alldiff[!duplicated(alldiff$SYMBOL),]
 alldiff               <- alldiff[order(alldiff$avg_log2FC,decreasing = T),]
 genelist              <- alldiff$avg_log2FC
@@ -535,7 +534,7 @@ gseaplot2(GSE202771.HDQP1.gsea.re,
           ES_geom = "line",
           pvalue_table = F)
 dev.off()
-#p-value = 1.44e-07
+#p-value = 1e-10
 save(GSE202771.HDQP1.gsea.re,file = "Pro_TNBC/paper/data/results/section_4/GSE202771.HDQP1.gsea.re.RDa")
 
 
@@ -747,4 +746,10 @@ figs3 <- plot_grid(p1,p2,p3,p4,p5,p6,ncol = 2)
 ggsave(figs3,filename = "Pro_TNBC/paper/plot/section_4/TNBC_BRCA1_0554/feature.plot.in.TNBC0554.pdf",width=25,height=30)
 
 
-                                  
+
+
+
+
+
+
+

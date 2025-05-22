@@ -1,3 +1,4 @@
+
 #############################################################################################
 ####ELF3 knock-down induces partial Claudin-low phenotype in Basal-like cancer.####
 #############################################################################################
@@ -76,14 +77,8 @@ save(averages,file = "Pro_TNBC/paper/data/results/section_5/averages.cnv.in.TNBC
 
 ####*Figure 6b: Differential expression between sh-ELF3 and control group. ####
 HCC70_SHELF3_low_VS_high_deres_symbol_highCount  <- subset(HCC70_SHELF3_low_VS_high_deres_symbol_highCount,avg_log2FC <10)
-HCC70_SHELF3_low_VS_high_deres_symbol_highCount             <- within(HCC70_SHELF3_low_VS_high_deres_symbol_highCount,{
-  sig                                   <- NA
-  sig[p_val_adj < 0.05 & avg_log2FC > 0.5]   <- "up"
-  sig[p_val_adj < 0.05 & avg_log2FC < -0.5]  <- "down"
-})
-HCC70_SHELF3_low_VS_high_deres_symbol_highCount[is.na(HCC70_SHELF3_low_VS_high_deres_symbol_highCount$sig),8] <- "none"
 #
-de_genes                                  <- c("ELF3","CLDN4","CDH3","SDC4","VTCN1","MPZL1")
+de_genes                                  <- c("ELF3","CLDN4","CDH3","SDC4","VTCN1","MPZL1","CD24","CD44","CLDN3","CLDN7","VIM","EPCAM","KRT19")
 library(ggrepel)
 fig5f                                     <- ggplot(HCC70_SHELF3_low_VS_high_deres_symbol_highCount,aes(avg_log2FC, -log10(p_val_adj),color=sig))+
   geom_hline(yintercept = -log10(0.05), linetype = "dashed", color = "black")+
@@ -95,20 +90,20 @@ fig5f                                     <- ggplot(HCC70_SHELF3_low_VS_high_der
   geom_label_repel(data = subset(HCC70_SHELF3_low_VS_high_deres_symbol_highCount, SYMBOL %in% de_genes),
                    max.overlaps = getOption("ggrepel.max.overlaps", default = 20),
                    aes(label = SYMBOL),
-                   size = 8, 
-                   color = 'black',fontface = "italic",
+                   size = 12, 
+                   color = 'black',fontface = "bold.italic",
                    segment.color = "black",   
                    segment.linetype = "solid", 
                    segment.size = 0.5 ,
                    box.padding = 3,        
                    point.padding = 0.2 ) +
-  xlab("log2fc")+
-  ylab("-log10padjust")+ggplot.style
+  xlab("log2FC")+
+  ylab("-log10 p-adj")+ggplot.style
 
 ggsave(fig5f,filename = "Pro_TNBC/paper/plot/section_5/Volcano.map.of.ELF3-low.pdf",width = 20,height = 15)
 
-
-
+HCC70_SHELF3_highCount_de <- subset(HCC70_SHELF3_low_VS_high_deres_symbol_highCount,sig=="up"|sig=="down")
+write.csv(HCC70_SHELF3_highCount_de,file = "Pro_TNBC/paper/data/results/section_5/HCC70_SHELF3_highCount_de.csv")
 
 
 ####*Figure 6c: heatmap of ELF3-low down genes in CCLE cells ####
@@ -200,22 +195,22 @@ dev.off()
 
 
 ####supplementary Figure 7: ELF3 expression of Basal-like and Claudin-low cancer cells in HDQP1 cell line (from GSE173634 and GSE202771 datasets) and TNBC patient 0554. ####
-load("Pro_TNBC/paper/data/results/section_4/GSE202771_HDQP1_scRNA.RData")
+load("Pro_TNBC/paper/data/results/section_4/GSE202771_HDQP1/GSE202771_HDQP1_scRNA.RData")
 GSE202771.HDQP1.cpm              <- as.matrix(GSE202771_HDQP1_scRNA@assays$RNA@data) %>% t() %>% as.data.frame()
 GSE202771.HDQP1.cpm.ELF3         <- GSE202771.HDQP1.cpm[,"ELF3",drop=F]
 identical(rownames(GSE202771.HDQP1.cpm.ELF3),rownames(GSE202771_HDQP1_scRNA@meta.data))
 GSE202771.HDQP1.cpm.ELF3$subtype <- GSE202771_HDQP1_scRNA$subtype
 GSE202771.HDQP1.cpm.ELF3$sample  <- rep("GSE202771.HDQP1",nrow(GSE202771.HDQP1.cpm.ELF3))
 
-load("Pro_TNBC/paper/data/results/section_4/GSE173634_HDQP1_scRNA.RData")
-GSE173634.HDQP1.cpm                     <- as.matrix(GSE173634.HDQP1.scRNA@assays$RNA@data) %>% t() %>% as.data.frame()
+load("Pro_TNBC/paper/data/results/section_4/GSE173634_HDQP1/GSE173634_HDQP1_scRNA.RData")
+GSE173634.HDQP1.cpm              <- as.matrix(GSE173634.HDQP1.scRNA@assays$RNA@data) %>% t() %>% as.data.frame()
 GSE173634.HDQP1.cpm.ELF3         <- GSE173634.HDQP1.cpm[,"ENSG00000163435",drop=F]
 identical(rownames(GSE173634.HDQP1.cpm.ELF3),rownames(GSE173634.HDQP1.scRNA@meta.data))
 GSE173634.HDQP1.cpm.ELF3$subtype <- GSE173634.HDQP1.scRNA$subtype
 GSE173634.HDQP1.cpm.ELF3$sample  <- rep("GSE173634.HDQP1",nrow(GSE173634.HDQP1.cpm.ELF3))
 
 load("Pro_TNBC/paper/data/results/section_4/TNBC_BRCA1_0554_tumor_scRNA(tsne_by_cor).RData")
-TNBC.0554.cpm                     <- as.matrix(TNBC_BRCA1_0554_tumor_scRNA@assays$RNA@data) %>% t() %>% as.data.frame()
+TNBC.0554.cpm              <- as.matrix(TNBC_BRCA1_0554_tumor_scRNA@assays$RNA@data) %>% t() %>% as.data.frame()
 TNBC.0554.cpm.ELF3         <- TNBC.0554.cpm[,"ENSG00000163435",drop=F]
 identical(rownames(TNBC.0554.cpm.ELF3),rownames(TNBC_BRCA1_0554_tumor_scRNA@meta.data))
 TNBC.0554.cpm.ELF3$subtype <- TNBC_BRCA1_0554_tumor_scRNA$subtype
@@ -320,3 +315,4 @@ de_intersect_genes <- de_intersect_genes %>%
 de_intersect_genes  <- de_intersect_genes[,-c(5,8)]
 de_intersect_genes <- de_intersect_genes[-6,]
 write.csv(de_intersect_genes,file = "Pro_TNBC/paper/data/results/section_5/de_intersect_genes.csv")
+
